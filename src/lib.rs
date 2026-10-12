@@ -107,6 +107,38 @@ impl HttpResponse {
         new
     }
 }
+impl Display for HttpResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f,"HTTP/1.1 {}\r\n", self.status_code as u16)?;
+        let mut headers = self.headers.clone();
+        if let Some(server) = headers.remove("Server") {
+            write!(f, "Server: {server}\r\n")?;
+        } else {
+            write!(f, "Server: Rust Custom\r\n")?;
+        }
+
+        if !self.body.is_empty() {
+            if let Some(content_length) = headers.remove("Content-Length") {
+                write!(f, "Content-Length: {content_length}\r\n")?;
+            } else {
+                write!(f, "Content-Length: {}\r\n", self.body.len())?;
+            }
+        }
+
+        for (key, value) in &self.headers {
+            write!(f, "{key}: {value}\r\n")?;
+        }
+
+        write!(f, "\r\n")?;
+        
+        if let Ok(body_string) = String::from_utf8(self.body.clone()) {
+            write!(f, "{}", body_string)
+        }
+        else {
+            write!(f, "{}", self.body.iter().map(|byte| *byte as char).collect::<String>())
+        }    
+    }
+}
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum RequestMethod {

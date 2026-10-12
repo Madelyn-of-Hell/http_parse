@@ -8,7 +8,7 @@ pub struct HttpRequest {
     method: RequestMethod,
     target: PathBuf,
     headers: HashMap<String, String>,
-    body: String
+    body: Vec<u8>
 }
 impl HttpRequest {
     pub fn from_slice(slice: &[u8]) -> Option<Self> {
@@ -28,7 +28,7 @@ impl HttpRequest {
         let Some(method_raw)  = top_level_captures.name("method") .map(|capture| capture.as_str()) else {debug!("No method found");  return None};
         let Some(target_raw)  = top_level_captures.name("target") .map(|capture| capture.as_str()) else {debug!("No target found");  return None};
         let Some(headers_raw) = top_level_captures.name("headers").map(|capture| capture.as_str()) else {debug!("No headers found"); return None};
-        let body              = top_level_captures.name("body").map(|capture| capture.as_str()).unwrap_or("").to_string();
+        let body           = top_level_captures.name("body")   .map(|capture| capture.as_str()).unwrap_or("").to_string().into_bytes();
 
         let Some(method) = RequestMethod::try_from(method_raw) else {debug!("Invalid method: {method_raw}"); return None};
         let Ok(target) = PathBuf::from_str(target_raw) else {debug!("Target couldn't be formatted to a path. Value: {target_raw}"); return None};
@@ -55,15 +55,54 @@ impl Display for HttpRequest {
         for (key, value) in &self.headers {
             writeln!(f, "{key}: {value}")?;
         };
-        write!(f, "\n{}", self.body)
+        if let Ok(body_string) = String::from_utf8(self.body.clone()) {
+            write!(f, "\n{}", body_string)
+        }
+        else {
+            write!(f, "\n{}", self.body.iter().map(|byte| *byte as char).collect::<String>())
+        }
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct HttpResponse {
     status_code: HttpStatus,
     headers: HashMap<String, String>,
-    body: String
+    body: Vec<u8>
+}
+impl HttpResponse {
+    fn new() -> Self {
+        Self{
+            status_code: HttpStatus::Ok,
+            headers: HashMap::new(),
+            body: vec![]
+        }
+    }
+    
+    fn with_status(self, status: HttpStatus) -> Self {
+        let mut new = self.clone();
+        new.status_code = status;
+
+        new
+    }
+    fn with_header(self, key: String, value: String) -> Self {
+        let mut new = self.clone();
+        new.headers.insert(key, value);
+
+        new
+    } 
+    fn with_body_bytes(self, body: &[u8]) -> Self {
+        let mut new = self.clone();
+        new.body = body.to_vec();
+
+        new
+    }
+    fn with_body_string(self, body: String) -> Self {
+        let mut new = self.clone();
+        new.body = body.into_bytes();
+
+        new
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -105,14 +144,14 @@ impl RequestMethod {
 }
 
 #[repr(u16)]
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum HttpStatus {
     Continue = 100,
     SwitchingProtocols = 101,
     Processing = 102,
     Checkpoint = 103,
     RequestURITooLong = 122,
-    OK = 200,
+    Ok = 200,
     Created = 201,
     Accepted = 202,
     NonAuthoritativeInformation = 203,

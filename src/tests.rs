@@ -1,10 +1,12 @@
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
-use std::path::PathBuf;
-use std::str::FromStr;
+    use std::path::PathBuf;
+    use std::str::FromStr;
 
-use crate::HttpRequest;
+    use crate::HttpRequest;
+    use crate::HttpResponse;
+    use crate::HttpStatus::InternalServerError;
     use crate::RequestMethod;
 
     #[test]
@@ -21,7 +23,7 @@ use crate::HttpRequest;
             method: RequestMethod::Get,
             target: PathBuf::from_str("/users").unwrap(),
             headers: ex_headers,
-            body: "bgeoirrrfmeriobody".to_string()
+            body: "bgeoirrrfmeriobody".to_string().into_bytes()
         },
             request
         )
@@ -38,14 +40,14 @@ use crate::HttpRequest;
             method: RequestMethod::Get,
             target: PathBuf::from_str("/users").unwrap(),
             headers: ex_headers,
-            body: "bgeoirrrfmeriobody".to_string()
+            body: "bgeoirrrfmeriobody".to_string().into_bytes()
         };
         
         let request_string = request.to_string();
         println!("{request_string}");
-        assert!(request_string.starts_with("GET /users HTTP/1.1\n"));
-        assert!(request_string.ends_with("\n\nbgeoirrrfmeriobody"));
-        assert!(request_string.contains("\nhost: mads"));
-        assert!(request_string.contains("\ndoom: test"));
+        assert!(request_string.starts_with("GET /users HTTP/1.1\r\n"));
+        assert!(request_string.ends_with("\r\n\r\nbgeoirrrfmeriobody"));
+        assert!(request_string.contains("\r\nhost: mads"));
+        assert!(request_string.contains("\r\ndoom: test"));
     }
 }

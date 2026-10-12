@@ -51,15 +51,18 @@ impl HttpRequest {
 }
 impl Display for HttpRequest {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "{} {} HTTP/1.1", self.method, self.target.display())?;
+        write!(f, "{} {} HTTP/1.1\r\n", self.method, self.target.display())?;
         for (key, value) in &self.headers {
-            writeln!(f, "{key}: {value}")?;
+            write!(f, "{key}: {value}\r\n")?;
         };
+
+        write!(f, "\r\n");
+        
         if let Ok(body_string) = String::from_utf8(self.body.clone()) {
-            write!(f, "\n{}", body_string)
+            write!(f, "{}", body_string)
         }
         else {
-            write!(f, "\n{}", self.body.iter().map(|byte| *byte as char).collect::<String>())
+            write!(f, "{}", self.body.iter().map(|byte| *byte as char).collect::<String>())
         }
     }
 }

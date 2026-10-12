@@ -9,7 +9,7 @@ use crate::HttpRequest;
 
     #[test]
     fn request_from_str() {
-        let request = HttpRequest::from_str(&format!("GET /users HTTP1.1\nhost: mads\ndoom: test\n\nbgeoirrrfmeriobody")).unwrap();
+        let request = HttpRequest::from_str("GET /users HTTP/1.1\nhost: mads\ndoom: test\n\nbgeoirrrfmeriobody").unwrap();
 
         let mut ex_headers = HashMap::new();
 
@@ -25,5 +25,27 @@ use crate::HttpRequest;
         },
             request
         )
+    }
+
+    #[test]
+    fn parse_request() {
+        let mut ex_headers = HashMap::new();
+
+        ex_headers.insert("host".to_string(), "mads".to_string());
+        ex_headers.insert("doom".to_string(), "test".to_string());
+
+        let request = HttpRequest {
+            method: RequestMethod::Get,
+            target: PathBuf::from_str("/users").unwrap(),
+            headers: ex_headers,
+            body: "bgeoirrrfmeriobody".to_string()
+        };
+        
+        let request_string = request.to_string();
+        println!("{request_string}");
+        assert!(request_string.starts_with("GET /users HTTP/1.1\n"));
+        assert!(request_string.ends_with("\n\nbgeoirrrfmeriobody"));
+        assert!(request_string.contains("\nhost: mads"));
+        assert!(request_string.contains("\ndoom: test"));
     }
 }

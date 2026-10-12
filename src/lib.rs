@@ -1,5 +1,5 @@
 mod tests;
-use std::{collections::HashMap, path::PathBuf, str::FromStr};
+use std::{collections::HashMap, fmt::Display, path::PathBuf, str::FromStr};
 use log::{debug, error};
 use regex::Regex;
 
@@ -49,6 +49,15 @@ impl HttpRequest {
         })
     }
 }
+impl Display for HttpRequest {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "{} {} HTTP/1.1", self.method, self.target.display())?;
+        for (key, value) in &self.headers {
+            writeln!(f, "{key}: {value}")?;
+        };
+        write!(f, "\n{}", self.body)
+    }
+}
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct HttpResponse {
@@ -65,6 +74,21 @@ pub enum RequestMethod {
     Post,
     Put,
     Delete
+}
+impl Display for RequestMethod {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f,
+            "{}",
+            match self {
+                Self::Get => "GET",
+                Self::Query => "QUERY",
+                Self::Head => "HEAD",
+                Self::Post => "POST",
+                Self::Put => "PUT",
+                Self::Delete => "DELETE",
+            }
+        )
+    }
 }
 impl RequestMethod {
     pub fn try_from(from: &str) -> Option<RequestMethod> {

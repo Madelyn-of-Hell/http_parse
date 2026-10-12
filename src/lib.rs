@@ -195,4 +195,13 @@ pub enum HttpStatus {
     TooManyRequests = 429,
     RequestHeaderFieldsTooLarge = 431,
     UnavailableForLegalReasons = 451,
+    InternalServerError = 500,
+    NotImplemented = 501,
+    BadGateway = 502,
+    ServiceUnavailable = 503,
+    GatewayTimeout = 504,
+    HTTPVersionNotSupported = 505,
+    InsufficientStorage = 507,
+    LoopDetected = 508,
+    NetworkAuthenticationRequired = 511
 }

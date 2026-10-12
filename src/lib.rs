@@ -3,6 +3,7 @@ use std::{collections::HashMap, fmt::Display, path::PathBuf, str::FromStr};
 use log::{debug, error};
 use regex::Regex;
 
+/// An HTTP Request, typically parsed from a serialised request.
 #[derive(Debug, PartialEq, Eq)]
 pub struct HttpRequest {
     method: RequestMethod,
@@ -11,9 +12,11 @@ pub struct HttpRequest {
     body: Vec<u8>
 }
 impl HttpRequest {
+    /// Returns a new HttpRequest as long as the bytes comprise a valid HTTP request.
     pub fn from_slice(slice: &[u8]) -> Option<Self> {
         Self::from_str(&String::from_utf8_lossy(slice))
     }
+    /// Returns a new HttpRequest as long as the string comprise a valid HTTP request.
     pub fn from_str(string: &str) -> Option<Self> {
         let Ok(top_level_splitter) = Regex::new(r"(?<method>.+?) (?<target>.+?) .+\s(?<headers>(?:.+\s)+)\s(?<body>[\s\S]+)?") else {
             error!("Top Level  failed to compile");
@@ -31,7 +34,7 @@ impl HttpRequest {
         let body           = top_level_captures.name("body")   .map(|capture| capture.as_str()).unwrap_or("").to_string().into_bytes();
 
         let Some(method) = RequestMethod::try_from(method_raw) else {debug!("Invalid method: {method_raw}"); return None};
-        let Ok(target) = PathBuf::from_str(target_raw) else {debug!("Target couldn't be formatted to a path. Value: {target_raw}"); return None};
+        let Ok(target) = PathBuf::from_str(target_raw);
         
         let header_captures = header_splitter.captures_iter(headers_raw);
         let headers = header_captures.filter_map( |entry | {
@@ -56,7 +59,7 @@ impl Display for HttpRequest {
             write!(f, "{key}: {value}\r\n")?;
         };
 
-        write!(f, "\r\n");
+        write!(f, "\r\n")?;
         
         if let Ok(body_string) = String::from_utf8(self.body.clone()) {
             write!(f, "{}", body_string)
@@ -67,6 +70,7 @@ impl Display for HttpRequest {
     }
 }
 
+/// An HTTP Response, Typically built with the builder methods and then serialised.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct HttpResponse {
     status_code: HttpStatus,
@@ -74,33 +78,37 @@ pub struct HttpResponse {
     body: Vec<u8>
 }
 impl HttpResponse {
-    fn new() -> Self {
+    /// Construct a new, empty response.
+    pub fn new() -> Self {
         Self{
             status_code: HttpStatus::Ok,
             headers: HashMap::new(),
             body: vec![]
         }
     }
-    
-    fn with_status(self, status: HttpStatus) -> Self {
+    /// Return the response with the given status.
+    pub fn with_status(self, status: HttpStatus) -> Self {
         let mut new = self.clone();
         new.status_code = status;
 
         new
     }
-    fn with_header(self, key: String, value: String) -> Self {
+    /// Return the response with the given header.
+    pub fn with_header(self, key: String, value: String) -> Self {
         let mut new = self.clone();
         new.headers.insert(key, value);
 
         new
     } 
-    fn with_body_bytes(self, body: &[u8]) -> Self {
+    /// Return the response with the given body.
+    pub fn with_body_bytes(self, body: &[u8]) -> Self {
         let mut new = self.clone();
         new.body = body.to_vec();
 
         new
     }
-    fn with_body_string(self, body: String) -> Self {
+    /// Return the response with the given status.
+    pub fn with_body_string(self, body: String) -> Self {
         let mut new = self.clone();
         new.body = body.into_bytes();
 
@@ -140,6 +148,8 @@ impl Display for HttpResponse {
     }
 }
 
+/// Methods for an HTTP Request
+
 #[derive(Debug, PartialEq, Eq)]
 pub enum RequestMethod {
     Get,
@@ -165,6 +175,7 @@ impl Display for RequestMethod {
     }
 }
 impl RequestMethod {
+    /// Return the matching enum variant, if applicable.
     pub fn try_from(from: &str) -> Option<RequestMethod> {
         return match from.to_lowercase().as_str() {
             "get" => Some(Self::Get),
@@ -178,6 +189,7 @@ impl RequestMethod {
     }
 }
 
+/// All HTTP Status Codes.
 #[repr(u16)]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum HttpStatus {

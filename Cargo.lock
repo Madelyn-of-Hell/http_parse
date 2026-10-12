@@ -27,15 +27,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7cd812cc2bc1d69d4764bd80df88b4317eaef9e773c75226407d9bc0876b211c"
 
 [[package]]
-name = "http_parse"
-version = "0.1.0"
-dependencies = [
- "log",
- "regex",
- "simple_logger",
-]
-
-[[package]]
 name = "libc"
 version = "0.2.190"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -66,6 +57,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5c7398b9c8b70908f6371f47ed36737907c87c52af34c268fed0bf0ceb92ead9"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "parseHTTP"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "regex",
+ "simple_logger",
 ]
 
 [[package]]

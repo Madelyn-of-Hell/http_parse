@@ -1,7 +1,12 @@
 [package]
-name = "http_parse"
+name = "parseHTTP"
 version = "0.1.0"
 edition = "2024"
+description = "A small utility crate for parsing and building HTTP messages."
+license = "GPL-3.0"
+keywords = ["HTTP", "Parsing"]
+categories = ["data-structures", "network-programming", "parser-implementations"]
+repository = "https://github.com/Madelyn-of-Hell/http_parse"
 
 [dependencies]
 log = "0.4.34"

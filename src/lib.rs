@@ -51,6 +51,17 @@ impl HttpRequest {
             body
         })
     }
+
+    pub fn method(&self) -> RequestMethod {
+        self.method.clone()
+    }
+    pub fn target(&self) -> PathBuf {
+        self.target.clone()
+    }
+    pub fn headers(&self) -> &HashMap<String, String> {
+        &self.headers
+    }
+    
 }
 impl Display for HttpRequest {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -150,7 +161,7 @@ impl Display for HttpResponse {
 
 /// Methods for an HTTP Request
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum RequestMethod {
     Get,
     Query,

@@ -84,14 +84,14 @@ impl Display for HttpRequest {
 /// An HTTP Response, Typically built with the builder methods and then serialised.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct HttpResponse {
-    status_code: HttpStatus,
-    headers: HashMap<String, String>,
-    body: Vec<u8>
+    pub status_code: HttpStatus,
+    pub headers: HashMap<String, String>,
+    pub body: Vec<u8>
 }
 impl HttpResponse {
     /// Construct a new, empty response.
     pub fn new() -> Self {
-        Self{
+        Self {
             status_code: HttpStatus::Ok,
             headers: HashMap::new(),
             body: vec![]

@@ -14,11 +14,19 @@ pub struct HttpRequest {
     body: Vec<u8>
 }
 impl HttpRequest {
-    /// Returns a new HttpRequest as long as the bytes comprise a valid HTTP request.
+    /// Returns a new [`HttpRequest`] as long as the bytes comprise a valid HTTP request.
+    /// # Errors
+    /// Errors occur if:
+    /// - The request can't be parsed (i.e. it contains invalid syntax)
+    /// - The request is incomplete (missing a method, target, or header section)
     pub fn from_slice(slice: &[u8]) -> Result<Self> {
         Self::from_str(&String::from_utf8_lossy(slice))
     }
-    /// Returns a new HttpRequest as long as the string comprise a valid HTTP request.
+    /// Returns a new [`HttpRequest`] as long as the string comprise a valid HTTP request.
+    /// # Errors
+    /// Errors occur if:
+    /// - The request can't be parsed (i.e. it contains invalid syntax)
+    /// - The request is incomplete (missing a method, target, or header section)
     pub fn from_str(string: &str) -> Result<Self> {
         let top_level_splitter = Regex::new(r"(?<method>.+?) (?<target>.+?) .+\s(?<headers>(?:.+\s)+)\s+(?<body>[\s\S]+)?")?;
         let header_splitter = Regex::new(r"(?<key>.+): (?<value>\S+)\s?")?;
@@ -60,15 +68,19 @@ impl HttpRequest {
         })
     }
 
+    /// Returns a clone of the request method
     pub fn method(&self) -> RequestMethod {
         self.method.clone()
     }
+    /// Returns a clone of the target path
     pub fn target(&self) -> PathBuf {
         self.target.clone()
     }
+    /// Returns an immutable reference to the hash map of queries
     pub fn query(&self) -> &HashMap<String, String> {
         &self.query
     }
+    /// Returns an immutable reference to the hash map of headers
     pub fn headers(&self) -> &HashMap<String, String> {
         &self.headers
     }
@@ -108,7 +120,7 @@ impl HttpResponse {
             body: vec![]
         }
     }
-    /// Return the response with the given status.
+    /// Return the response with the given [`HttpStatus`].
     pub fn with_status(self, status: HttpStatus) -> Self {
         let mut new = self.clone();
         new.status_code = status;
@@ -170,8 +182,7 @@ impl Display for HttpResponse {
     }
 }
 
-/// Methods for an HTTP Request
-
+/// Methods for an HTTP Request.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum RequestMethod {
     Get,
@@ -205,7 +216,7 @@ impl Display for RequestMethod {
     }
 }
 impl RequestMethod {
-    /// Return the matching enum variant, if applicable.
+    /// Return the matching enum variant, or [`None`].
     pub fn try_from(from: &str) -> Option<RequestMethod> {
         return match from.to_lowercase().as_str() {
             "get" => Some(Self::Get),
@@ -223,7 +234,7 @@ impl RequestMethod {
     }
 }
 
-/// All HTTP Status Codes.
+/// Status Codes for an HTTP Response.
 #[repr(u16)]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum HttpStatus {

@@ -177,9 +177,13 @@ pub enum RequestMethod {
     Get,
     Query,
     Head,
-    Post,
+    Options,
+    Trace,
     Put,
-    Delete
+    Delete,
+    Post,
+    Patch,
+    Connect
 }
 impl Display for RequestMethod {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -189,9 +193,13 @@ impl Display for RequestMethod {
                 Self::Get => "GET",
                 Self::Query => "QUERY",
                 Self::Head => "HEAD",
-                Self::Post => "POST",
+                Self::Options => "OPTIONS",
+                Self::Trace => "TRACE",
                 Self::Put => "PUT",
                 Self::Delete => "DELETE",
+                Self::Post => "POST",
+                Self::Patch => "PATCH",
+                Self::Connect => "CONNECT"
             }
         )
     }
@@ -203,9 +211,13 @@ impl RequestMethod {
             "get" => Some(Self::Get),
             "query" => Some(Self::Query),
             "head" => Some(Self::Head),
-            "post" => Some(Self::Post),
+            "options" => Some(Self::Options),
+            "trace" => Some(Self::Trace),
             "put" => Some(Self::Put),
             "delete" => Some(Self::Delete),
+            "post" => Some(Self::Post),
+            "patch" => Some(Self::Patch),
+            "connect" => Some(Self::Connect),
             _ => None
         }
     }

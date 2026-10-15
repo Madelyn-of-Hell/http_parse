@@ -104,7 +104,8 @@ impl Display for HttpRequest {
     }
 }
 
-/// An HTTP Response, Typically built with the builder methods and then serialised.
+/// An HTTP Response.
+/// Initialise with [`HttpResponse::new`], then build using the `with_*` methods.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct HttpResponse {
     pub status_code: HttpStatus,

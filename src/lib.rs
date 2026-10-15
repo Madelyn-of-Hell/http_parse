@@ -1,7 +1,8 @@
 mod tests;
 use std::{collections::HashMap, fmt::Display, path::PathBuf};
-use log::{debug, error};
 use regex::Regex;
+use anyhow::{Ok, Result, anyhow};
+use std::result::Result::Ok as StdOk;
 
 /// An HTTP Request, typically parsed from a serialised request.
 #[derive(Debug, PartialEq, Eq)]
@@ -14,52 +15,43 @@ pub struct HttpRequest {
 }
 impl HttpRequest {
     /// Returns a new HttpRequest as long as the bytes comprise a valid HTTP request.
-    pub fn from_slice(slice: &[u8]) -> Option<Self> {
+    pub fn from_slice(slice: &[u8]) -> Result<Self> {
         Self::from_str(&String::from_utf8_lossy(slice))
     }
     /// Returns a new HttpRequest as long as the string comprise a valid HTTP request.
-    pub fn from_str(string: &str) -> Option<Self> {
-        let Ok(top_level_splitter) = Regex::new(r"(?<method>.+?) (?<target>.+?) .+\s(?<headers>(?:.+\s)+)\s+(?<body>[\s\S]+)?") else {
-            error!("Top Level regex failed to compile");
-            return None
-        };
-        let Ok(header_splitter) = Regex::new(r"(?<key>.+): (?<value>\S+)\s?") else {
-            error!("Header regex failed to compile");
-            return None
-        };
-        let Ok(query_splitter) = Regex::new(r"(?<key>[^&]+)=(?<value>[^&]+)&?") else {
-            error!("Query regex failed to compile");
-            return None
-        };
+    pub fn from_str(string: &str) -> Result<Self> {
+        let top_level_splitter = Regex::new(r"(?<method>.+?) (?<target>.+?) .+\s(?<headers>(?:.+\s)+)\s+(?<body>[\s\S]+)?")?;
+        let header_splitter = Regex::new(r"(?<key>.+): (?<value>\S+)\s?")?;
+        let query_splitter = Regex::new(r"(?<key>[^&]+)=(?<value>[^&]+)&?")?;
 
-        let Some(top_level_captures) = top_level_splitter.captures(string) else {debug!("Couldn't capture anything!"); return None};
+        let top_level_captures = top_level_splitter.captures(string).ok_or(anyhow!("Failed to parse the Request"))?;
 
-        let Some(method_raw)  = top_level_captures.name("method") .map(|capture| capture.as_str()) else {debug!("No method found");  return None};
-        let Some(target_raw)  = top_level_captures.name("target") .map(|capture| capture.as_str()) else {debug!("No target found");  return None};
-        let Some(headers_raw) = top_level_captures.name("headers").map(|capture| capture.as_str()) else {debug!("No headers found"); return None};
-        let body           = top_level_captures.name("body")   .map(|capture| capture.as_str()).unwrap_or("").to_string().into_bytes();
+        let method_raw  = top_level_captures.name("method") .map(|capture| capture.as_str()).ok_or(anyhow!("No method found"))?;
+        let target_raw  = top_level_captures.name("target") .map(|capture| capture.as_str()).ok_or(anyhow!("No target found"))?;
+        let headers_raw = top_level_captures.name("headers").map(|capture| capture.as_str()).ok_or(anyhow!("No headers found"))?;
+        let body     = top_level_captures.name("body")   .map(|capture| capture.as_str()).unwrap_or("").to_string().into_bytes();
         let (target_raw, query_raw) = target_raw.split_once("?").unwrap_or((target_raw,""));
 
-        let Some(method) = RequestMethod::try_from(method_raw) else {debug!("Invalid method: {method_raw}"); return None};
+        let method = RequestMethod::try_from(method_raw).ok_or(anyhow!("Invalid method: {method_raw}"))?;
         let target = PathBuf::from(target_raw);
         
         let query_captures = query_splitter.captures_iter(query_raw);
         let query = query_captures.filter_map( |entry | {
-                let Some(header) = entry.name("key").map(|capture| capture.as_str()) else {error!("No key found for the current entry"); return None};
-                let Some(value) = entry.name("value").map(|capture| capture.as_str()) else {error!("No value found for the current entry"); return None};
+                let Some(header) = entry.name("key").map(|capture| capture.as_str()) else {return None};
+                let Some(value) = entry.name("value").map(|capture| capture.as_str()) else {return None};
                 Some((header.to_string(), value.to_string()))
             }
         ).collect::<HashMap<String, String>>();
         
         let header_captures = header_splitter.captures_iter(headers_raw);
         let headers = header_captures.filter_map( |entry | {
-                let Some(header) = entry.name("key").map(|capture| capture.as_str()) else {error!("No key found for the current entry"); return None};
-                let Some(value) = entry.name("value").map(|capture| capture.as_str()) else {error!("No value found for the current entry"); return None};
+                let Some(header) = entry.name("key").map(|capture| capture.as_str()) else {return None};
+                let Some(value) = entry.name("value").map(|capture| capture.as_str()) else {return None};
                 Some((header.to_string(), value.to_string()))
             }
         ).collect::<HashMap<String, String>>();
         
-        Some(HttpRequest {
+        Ok(HttpRequest {
             method,
             target,
             query,
@@ -91,7 +83,7 @@ impl Display for HttpRequest {
 
         write!(f, "\r\n")?;
         
-        if let Ok(body_string) = String::from_utf8(self.body.clone()) {
+        if let StdOk(body_string) = String::from_utf8(self.body.clone()) {
             write!(f, "{}", body_string)
         }
         else {
@@ -169,7 +161,7 @@ impl Display for HttpResponse {
 
         write!(f, "\r\n")?;
         
-        if let Ok(body_string) = String::from_utf8(self.body.clone()) {
+        if let StdOk(body_string) = String::from_utf8(self.body.clone()) {
             write!(f, "{}", body_string)
         }
         else {

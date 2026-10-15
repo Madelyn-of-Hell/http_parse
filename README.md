@@ -1,4 +1,4 @@
-# HTTP_PARSE
+# parseHTTP
 A small utility crate for parsing and building HTTP messages.
 
 > [!NOTE]

@@ -11,7 +11,7 @@ mod tests {
 
     #[test]
     fn parse_request_from_str() {
-        let request = HttpRequest::from_str("GET /users HTTP/1.1\nhost: mads\ndoom: test\n\nbgeoirrrfmeriobody").unwrap();
+        let request = HttpRequest::from_str("GET /users HTTP/1.1\r\nhost: mads\r\ndoom: test\r\n\r\nbgeoirrrfmeriobody").unwrap();
 
         let mut ex_headers = HashMap::new();
 
@@ -22,6 +22,33 @@ mod tests {
             HttpRequest {
             method: RequestMethod::Get,
             target: PathBuf::from_str("/users").unwrap(),
+            query: HashMap::new(),
+            headers: ex_headers,
+            body: "bgeoirrrfmeriobody".to_string().into_bytes()
+        },
+            request
+        )
+    }
+
+    #[test]
+    fn parse_request_with_form_from_str() {
+        let request = HttpRequest::from_str("GET /users?user=mads&crate=parse HTTP HTTP/1.1\r\nhost: mads\r\ndoom: test\r\n\r\nbgeoirrrfmeriobody").unwrap();
+
+        let mut ex_headers = HashMap::new();
+
+        ex_headers.insert("doom".to_string(), "test".to_string());
+        ex_headers.insert("host".to_string(), "mads".to_string());
+
+        let mut ex_query = HashMap::new();
+        
+        ex_query.insert("user".to_string(), "mads".to_string());
+        ex_query.insert("crate".to_string(), "parse".to_string());
+
+        assert_eq!(
+            HttpRequest {
+            method: RequestMethod::Get,
+            target: PathBuf::from_str("/users").unwrap(),
+            query: ex_query,
             headers: ex_headers,
             body: "bgeoirrrfmeriobody".to_string().into_bytes()
         },
@@ -31,22 +58,30 @@ mod tests {
 
     #[test]
     fn serialise_request() {
+
         let mut ex_headers = HashMap::new();
 
         ex_headers.insert("host".to_string(), "mads".to_string());
         ex_headers.insert("doom".to_string(), "test".to_string());
+        
+        let mut ex_query = HashMap::new();
+
+        ex_query.insert("doom".to_string(), "test".to_string());
+        ex_query.insert("host".to_string(), "mads".to_string());
 
         let request = HttpRequest {
             method: RequestMethod::Get,
             target: PathBuf::from_str("/users").unwrap(),
+            query: ex_query,
             headers: ex_headers,
             body: "bgeoirrrfmeriobody".to_string().into_bytes()
         };
         
-        let request_string = request.to_string();
-        println!("{request_string}");
-        assert!(request_string.starts_with("GET /users HTTP/1.1\r\n"));
+        let request_string = dbg!(request.to_string());
+        assert!(request_string.starts_with("GET /users?"));
         assert!(request_string.ends_with("\r\n\r\nbgeoirrrfmeriobody"));
+        assert!(request_string.contains("doom=test"));
+        assert!(request_string.contains("host=mads"));
         assert!(request_string.contains("\r\nhost: mads"));
         assert!(request_string.contains("\r\ndoom: test"));
     }

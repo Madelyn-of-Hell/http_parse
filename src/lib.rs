@@ -1,5 +1,5 @@
 mod tests;
-use std::{collections::HashMap, fmt::Display, path::PathBuf, str::FromStr};
+use std::{collections::HashMap, fmt::Display, path::PathBuf};
 use log::{debug, error};
 use regex::Regex;
 
@@ -8,6 +8,7 @@ use regex::Regex;
 pub struct HttpRequest {
     method: RequestMethod,
     target: PathBuf,
+    query: HashMap<String, String>,
     headers: HashMap<String, String>,
     body: Vec<u8>
 }
@@ -18,28 +19,42 @@ impl HttpRequest {
     }
     /// Returns a new HttpRequest as long as the string comprise a valid HTTP request.
     pub fn from_str(string: &str) -> Option<Self> {
-        let Ok(top_level_splitter) = Regex::new(r"(?<method>.+?) (?<target>.+?) .+\s(?<headers>(?:.+\s)+)\s(?<body>[\s\S]+)?") else {
-            error!("Top Level  failed to compile");
+        let Ok(top_level_splitter) = Regex::new(r"(?<method>.+?) (?<target>.+?) .+\s(?<headers>(?:.+\s)+)\s+(?<body>[\s\S]+)?") else {
+            error!("Top Level regex failed to compile");
             return None
         };
-        let Ok(header_splitter) = Regex::new(r"(?<key>.+): (?<value>.+)\s?") else {
-            error!("Top Level  failed to compile");
+        let Ok(header_splitter) = Regex::new(r"(?<key>.+): (?<value>\S+)\s?") else {
+            error!("Header regex failed to compile");
             return None
         };
+        let Ok(query_splitter) = Regex::new(r"(?<key>[^&]+)=(?<value>[^&]+)&?") else {
+            error!("Query regex failed to compile");
+            return None
+        };
+
         let Some(top_level_captures) = top_level_splitter.captures(string) else {debug!("Couldn't capture anything!"); return None};
 
         let Some(method_raw)  = top_level_captures.name("method") .map(|capture| capture.as_str()) else {debug!("No method found");  return None};
         let Some(target_raw)  = top_level_captures.name("target") .map(|capture| capture.as_str()) else {debug!("No target found");  return None};
         let Some(headers_raw) = top_level_captures.name("headers").map(|capture| capture.as_str()) else {debug!("No headers found"); return None};
         let body           = top_level_captures.name("body")   .map(|capture| capture.as_str()).unwrap_or("").to_string().into_bytes();
+        let (target_raw, query_raw) = target_raw.split_once("?").unwrap_or((target_raw,""));
 
         let Some(method) = RequestMethod::try_from(method_raw) else {debug!("Invalid method: {method_raw}"); return None};
-        let Ok(target) = PathBuf::from_str(target_raw);
+        let target = PathBuf::from(target_raw);
+        
+        let query_captures = query_splitter.captures_iter(query_raw);
+        let query = query_captures.filter_map( |entry | {
+                let Some(header) = entry.name("key").map(|capture| capture.as_str()) else {error!("No key found for the current entry"); return None};
+                let Some(value) = entry.name("value").map(|capture| capture.as_str()) else {error!("No value found for the current entry"); return None};
+                Some((header.to_string(), value.to_string()))
+            }
+        ).collect::<HashMap<String, String>>();
         
         let header_captures = header_splitter.captures_iter(headers_raw);
         let headers = header_captures.filter_map( |entry | {
-                let Some(header) = dbg!(entry.name("key").map(|capture| capture.as_str())) else {error!("No key found for the current entry"); return None};
-                let Some(value) = dbg!(entry.name("value").map(|capture| capture.as_str())) else {error!("No value found for the current entry"); return None};
+                let Some(header) = entry.name("key").map(|capture| capture.as_str()) else {error!("No key found for the current entry"); return None};
+                let Some(value) = entry.name("value").map(|capture| capture.as_str()) else {error!("No value found for the current entry"); return None};
                 Some((header.to_string(), value.to_string()))
             }
         ).collect::<HashMap<String, String>>();
@@ -47,6 +62,7 @@ impl HttpRequest {
         Some(HttpRequest {
             method,
             target,
+            query,
             headers,
             body
         })
@@ -58,14 +74,17 @@ impl HttpRequest {
     pub fn target(&self) -> PathBuf {
         self.target.clone()
     }
+    pub fn query(&self) -> &HashMap<String, String> {
+        &self.query
+    }
     pub fn headers(&self) -> &HashMap<String, String> {
         &self.headers
     }
-    
 }
 impl Display for HttpRequest {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} {} HTTP/1.1\r\n", self.method, self.target.display())?;
+        let query_str = self.query.iter().map(|(key, value)| format!("{key}={value}")).collect::<Vec<String>>().join("&");
+        write!(f, "{} {}?{} HTTP/1.1\r\n", self.method, self.target.display(), query_str)?;
         for (key, value) in &self.headers {
             write!(f, "{key}: {value}\r\n")?;
         };

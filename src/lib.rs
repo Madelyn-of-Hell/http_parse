@@ -121,32 +121,24 @@ impl HttpResponse {
         }
     }
     /// Return the response with the given [`HttpStatus`].
-    pub fn with_status(self, status: HttpStatus) -> Self {
-        let mut new = self.clone();
-        new.status_code = status;
-
-        new
+    pub fn with_status(mut self, status: HttpStatus) -> Self {
+        self.status_code = status;
+        self
     }
     /// Return the response with the given header.
-    pub fn with_header(self, key: String, value: String) -> Self {
-        let mut new = self.clone();
-        new.headers.insert(key, value);
-
-        new
+    pub fn with_header(mut self, key: String, value: String) -> Self {
+        self.headers.insert(key, value);
+        self
     } 
     /// Return the response with the given body.
-    pub fn with_body_bytes(self, body: &[u8]) -> Self {
-        let mut new = self.clone();
-        new.body = body.to_vec();
-
-        new
+    pub fn with_body_bytes(mut self, body: &[u8]) -> Self {
+        self.body = body.to_vec();
+        self
     }
     /// Return the response with the given status.
-    pub fn with_body_string(self, body: String) -> Self {
-        let mut new = self.clone();
-        new.body = body.into_bytes();
-
-        new
+    pub fn with_body_string(mut self, body: String) -> Self {
+        self.body = body.into_bytes();
+        self
     }
 }
 impl Display for HttpResponse {

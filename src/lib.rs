@@ -11,6 +11,7 @@ pub struct HttpRequest {
     target: PathBuf,
     query: HashMap<String, String>,
     headers: HashMap<String, String>,
+    cookie: HashMap<String, String>,
     pub body: Vec<u8>
 }
 impl HttpRequest {
@@ -29,7 +30,7 @@ impl HttpRequest {
     /// - The request is incomplete (missing a method, target, or header section)
     pub fn from_str(string: &str) -> Result<Self> {
         let top_level_splitter = Regex::new(r"(?<method>.+?) (?<target>.+?) .+\s(?<headers>(?:.+\s)+)\s+(?<body>[\s\S]+)?")?;
-        let header_splitter = Regex::new(r"(?<key>.+): (?<value>\S+)\s?")?;
+        let header_splitter = Regex::new(r"(?<key>.+): (?<value>[^\r\n]+)\s")?;
         let query_splitter = Regex::new(r"(?<key>[^&]+)=(?<value>[^&]+)&?")?;
 
         let top_level_captures = top_level_splitter.captures(string).ok_or(anyhow!("Failed to parse the Request"))?;
@@ -59,11 +60,18 @@ impl HttpRequest {
             }
         ).collect::<HashMap<String, String>>();
         
+        let cookie = query_splitter.captures_iter(headers.get("Cookie").unwrap_or(&String::new()))
+            .filter_map( |entry| {
+                let Some(header) = entry.name("key").map(|capture| capture.as_str()) else {return None};
+                let Some(value) = entry.name("value").map(|capture| capture.as_str()) else {return None};
+                Some((header.to_string(), value.to_string()))
+            }).collect::<HashMap<String, String>>();
         Ok(HttpRequest {
             method,
             target,
             query,
             headers,
+            cookie,
             body
         })
     }
@@ -83,6 +91,10 @@ impl HttpRequest {
     /// Returns an immutable reference to the hash map of headers
     pub fn headers(&self) -> &HashMap<String, String> {
         &self.headers
+    }
+    /// Returns an immutable reference to the hash map of cookies
+    pub fn cookie(&self) -> &HashMap<String, String> {
+        &self.cookie
     }
     /// Returns the Content-Length header, if any.
     pub fn content_length(&self) -> Option<u32> {

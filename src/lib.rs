@@ -11,7 +11,7 @@ pub struct HttpRequest {
     target: PathBuf,
     query: HashMap<String, String>,
     headers: HashMap<String, String>,
-    body: Vec<u8>
+    pub body: Vec<u8>
 }
 impl HttpRequest {
     /// Returns a new [`HttpRequest`] as long as the bytes comprise a valid HTTP request.
@@ -83,6 +83,16 @@ impl HttpRequest {
     /// Returns an immutable reference to the hash map of headers
     pub fn headers(&self) -> &HashMap<String, String> {
         &self.headers
+    }
+    /// Returns the Content-Length header, if any.
+    pub fn content_length(&self) -> Option<u32> {
+        self.headers().get("Content-Length")?.parse::<u32>().ok()
+    }
+    /// Fills [`Self::body`] with `n` bytes, where `n` is provided by [`Self::content_length`]. Fails if Content-Length wasn't provided.
+    pub fn fill_body(&mut self) -> Result<()> {
+        let content_length = self.content_length().ok_or(anyhow!("Request has no Content-Length header, therefore it has no body."))?;
+        self.body = vec![0; content_length as usize];
+        Ok(())
     }
 }
 impl Display for HttpRequest {

@@ -106,23 +106,21 @@ impl HttpRequest {
         self.body = vec![0; content_length as usize];
         Ok(())
     }
-}
-impl Display for HttpRequest {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+
+    pub fn render(&self) -> Vec<u8> {
+        let mut request:Vec<u8> = Vec::new();
+
         let query_str = self.query.iter().map(|(key, value)| format!("{key}={value}")).collect::<Vec<String>>().join("&");
-        write!(f, "{} {}?{} HTTP/1.1\r\n", self.method, self.target.display(), query_str)?;
+        request.append(&mut format!("{} {}?{} HTTP/1.1\r\n", self.method, self.target.display(), query_str).into_bytes());
         for (key, value) in &self.headers {
-            write!(f, "{key}: {value}\r\n")?;
+            request.append(&mut format!("{key}: {value}\r\n").into_bytes());
         };
 
-        write!(f, "\r\n")?;
+        request.append(&mut format!("\r\n").into_bytes());
         
-        if let StdOk(body_string) = String::from_utf8(self.body.clone()) {
-            write!(f, "{}", body_string)
-        }
-        else {
-            write!(f, "{}", self.body.iter().map(|byte| *byte as char).collect::<String>())
-        }
+        request.append(&mut self.body.clone());
+
+        request
     }
 }
 
@@ -163,37 +161,33 @@ impl HttpResponse {
         self.body = body.into_bytes();
         self
     }
-}
-impl Display for HttpResponse {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f,"HTTP/1.1 {}\r\n", self.status_code as u16)?;
+    pub fn render(&self) -> Vec<u8> {
+        let mut request:Vec<u8> = Vec::new();
+        request.append(&mut format!("HTTP/1.1 {}\r\n", self.status_code as u16).into_bytes());
         let mut headers = self.headers.clone();
         if let Some(server) = headers.remove("Server") {
-            write!(f, "Server: {server}\r\n")?;
+            request.append(&mut format!("Server: {server}\r\n").into_bytes());
         } else {
-            write!(f, "Server: Rust Custom\r\n")?;
+            request.append(&mut format!("Server: Rust Custom\r\n").into_bytes());
         }
 
         if !self.body.is_empty() {
             if let Some(content_length) = headers.remove("Content-Length") {
-                write!(f, "Content-Length: {content_length}\r\n")?;
+                request.append(&mut format!("Content-Length: {content_length}\r\n").into_bytes());
             } else {
-                write!(f, "Content-Length: {}\r\n", self.body.len())?;
+                request.append(&mut format!("Content-Length: {}\r\n", self.body.len()).into_bytes());
             }
         }
 
         for (key, value) in &self.headers {
-            write!(f, "{key}: {value}\r\n")?;
+            request.append(&mut format!("{key}: {value}\r\n").into_bytes());
         }
 
-        write!(f, "\r\n")?;
-        
-        if let StdOk(body_string) = String::from_utf8(self.body.clone()) {
-            write!(f, "{}", body_string)
-        }
-        else {
-            write!(f, "{}", self.body.iter().map(|byte| *byte as char).collect::<String>())
-        }    
+        request.append(&mut format!("\r\n").into_bytes());
+
+        request.append(&mut self.body.clone());
+
+        request
     }
 }
 
